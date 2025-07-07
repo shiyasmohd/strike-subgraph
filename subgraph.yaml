@@ -1,8 +1,10 @@
-specVersion: 0.0.2
+specVersion: 1.3.0
 description: Strike is an open-source protocol for algorithmic, efficient Money Markets on the Ethereum blockchain.
 repository: https://github.com/StrikeFinance/strike-subgraph
 schema:
   file: ./schema.graphql
+indexerHints:
+  prune: never
 dataSources:
   - kind: ethereum/contract
     name: Comptroller
@@ -13,7 +15,7 @@ dataSources:
       startBlock: 12133931
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.4
+      apiVersion: 0.0.9
       language: wasm/assemblyscript
       file: ./src/mappings/comptroller.ts
       entities:
@@ -55,7 +57,7 @@ templates:
       abi: SToken
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.4
+      apiVersion: 0.0.9
       language: wasm/assemblyscript
       file: ./src/mappings/stoken.ts
       entities:

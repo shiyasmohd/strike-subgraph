@@ -19,10 +19,10 @@ export let sTokenDecimalsBD: BigDecimal = exponentToBigDecimal(8)
 export let zeroBD = BigDecimal.fromString('0')
 
 export function createAccountSToken(
-  sTokenStatsID: string,
+  sTokenStatsID: Bytes,
   symbol: string,
-  account: string,
-  marketID: string,
+  account: Bytes,
+  marketID: Bytes,
 ): AccountSToken {
   let sTokenStats = new AccountSToken(sTokenStatsID)
   sTokenStats.symbol = symbol
@@ -40,7 +40,7 @@ export function createAccountSToken(
   return sTokenStats
 }
 
-export function createAccount(accountID: string): Account {
+export function createAccount(accountID: Bytes): Account {
   let account = new Account(accountID)
   account.countLiquidated = 0
   account.countLiquidator = 0
@@ -50,17 +50,17 @@ export function createAccount(accountID: string): Account {
 }
 
 export function updateCommonSTokenStats(
-  marketID: string,
+  marketID: Bytes,
   marketSymbol: string,
-  accountID: string,
+  accountID: Bytes,
   tx_hash: Bytes,
   timestamp: BigInt,
   blockNumber: BigInt,
   logIndex: BigInt,
 ): AccountSToken {
-  let sTokenStatsID = marketID.concat('-').concat(accountID)
+  let sTokenStatsID = marketID.concat(accountID)
   let sTokenStats = AccountSToken.load(sTokenStatsID)
-  if (sTokenStats == null) {
+  if (!sTokenStats) {
     sTokenStats = createAccountSToken(sTokenStatsID, marketSymbol, accountID, marketID)
   }
   getOrCreateAccountSTokenTransaction(
@@ -71,24 +71,22 @@ export function updateCommonSTokenStats(
     logIndex,
   )
   sTokenStats.accrualBlockNumber = blockNumber
-  return sTokenStats as AccountSToken
+  return sTokenStats
 }
 
 export function getOrCreateAccountSTokenTransaction(
-  accountID: string,
+  accountID: Bytes,
   tx_hash: Bytes,
   timestamp: BigInt,
   block: BigInt,
   logIndex: BigInt,
 ): AccountSTokenTransaction {
   let id = accountID
-    .concat('-')
-    .concat(tx_hash.toHexString())
-    .concat('-')
-    .concat(logIndex.toString())
+    .concat(tx_hash)
+    .concatI32(logIndex.toI32())
   let transaction = AccountSTokenTransaction.load(id)
 
-  if (transaction == null) {
+  if (!transaction) {
     transaction = new AccountSTokenTransaction(id)
     transaction.account = accountID
     transaction.tx_hash = tx_hash
@@ -98,5 +96,5 @@ export function getOrCreateAccountSTokenTransaction(
     transaction.save()
   }
 
-  return transaction as AccountSTokenTransaction
+  return transaction
 }

@@ -44,11 +44,9 @@ import {
  *    No need to update sTokenBalance, handleTransfer() will
  */
 export function handleMint(event: Mint): void {
-  let market = Market.load(event.address.toHexString())
+  let market = Market.load(event.address)!
   let mintID = event.transaction.hash
-    .toHexString()
-    .concat('-')
-    .concat(event.transactionLogIndex.toString())
+    .concatI32(event.transactionLogIndex.toI32())
 
   let sTokenAmount = event.params.mintTokens
     .toBigDecimal()
@@ -83,11 +81,9 @@ export function handleMint(event: Mint): void {
  *    No need to update sTokenBalance, handleTransfer() will
  */
 export function handleRedeem(event: Redeem): void {
-  let market = Market.load(event.address.toHexString())
+  let market = Market.load(event.address)!
   let redeemID = event.transaction.hash
-    .toHexString()
-    .concat('-')
-    .concat(event.transactionLogIndex.toString())
+    .concatI32(event.transactionLogIndex.toI32())
 
   let sTokenAmount = event.params.redeemTokens
     .toBigDecimal()
@@ -119,10 +115,10 @@ export function handleRedeem(event: Redeem): void {
  *    No need to updateMarket(), handleAccrueInterest() ALWAYS runs before this
  */
 export function handleBorrow(event: Borrow): void {
-  let market = Market.load(event.address.toHexString())
-  let accountID = event.params.borrower.toHex()
+  let market = Market.load(event.address)!
+  let accountID = event.params.borrower
   let account = Account.load(accountID)
-  if (account == null) {
+  if (!account) {
     account = createAccount(accountID)
   }
   account.hasBorrowed = true
@@ -156,9 +152,7 @@ export function handleBorrow(event: Borrow): void {
   sTokenStats.save()
 
   let borrowID = event.transaction.hash
-    .toHexString()
-    .concat('-')
-    .concat(event.transactionLogIndex.toString())
+    .concatI32(event.transactionLogIndex.toI32())
 
   let borrowAmount = event.params.borrowAmount
     .toBigDecimal()
@@ -195,10 +189,10 @@ export function handleBorrow(event: Borrow): void {
  *    repay.
  */
 export function handleRepayBorrow(event: RepayBorrow): void {
-  let market = Market.load(event.address.toHexString())
-  let accountID = event.params.borrower.toHex()
+  let market = Market.load(event.address)!
+  let accountID = event.params.borrower
   let account = Account.load(accountID)
-  if (account == null) {
+  if (!account) {
     createAccount(accountID)
   }
 
@@ -230,9 +224,7 @@ export function handleRepayBorrow(event: RepayBorrow): void {
   sTokenStats.save()
 
   let repayID = event.transaction.hash
-    .toHexString()
-    .concat('-')
-    .concat(event.transactionLogIndex.toString())
+    .concatI32(event.transactionLogIndex.toI32())
 
   let repayAmount = event.params.repayAmount
     .toBigDecimal()
@@ -272,17 +264,17 @@ export function handleRepayBorrow(event: RepayBorrow): void {
  *    add liquidation counts in this handler.
  */
 export function handleLiquidateBorrow(event: LiquidateBorrow): void {
-  let liquidatorID = event.params.liquidator.toHex()
+  let liquidatorID = event.params.liquidator
   let liquidator = Account.load(liquidatorID)
-  if (liquidator == null) {
+  if (!liquidator) {
     liquidator = createAccount(liquidatorID)
   }
   liquidator.countLiquidator = liquidator.countLiquidator + 1
   liquidator.save()
 
-  let borrowerID = event.params.borrower.toHex()
+  let borrowerID = event.params.borrower
   let borrower = Account.load(borrowerID)
-  if (borrower == null) {
+  if (!borrower) {
     borrower = createAccount(borrowerID)
   }
   borrower.countLiquidated = borrower.countLiquidated + 1
@@ -292,12 +284,10 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
   // asset. They seize one of potentially many types of sToken collateral of
   // the underwater borrower. So we must get that address from the event, and
   // the repay token is the event.address
-  let marketRepayToken = Market.load(event.address.toHexString())
-  let marketSTokenLiquidated = Market.load(event.params.sTokenCollateral.toHexString())
+  let marketRepayToken = Market.load(event.address)!
+  let marketSTokenLiquidated = Market.load(event.params.sTokenCollateral)!
   let mintID = event.transaction.hash
-    .toHexString()
-    .concat('-')
-    .concat(event.transactionLogIndex.toString())
+    .concatI32(event.transactionLogIndex.toI32())
 
   let sTokenAmount = event.params.seizeTokens
     .toBigDecimal()
@@ -338,8 +328,8 @@ export function handleLiquidateBorrow(event: LiquidateBorrow): void {
 export function handleTransfer(event: Transfer): void {
   // We only updateMarket() if accrual block number is not up to date. This will only happen
   // with normal transfers, since mint, redeem, and seize transfers will already run updateMarket()
-  let marketID = event.address.toHexString()
-  let market = Market.load(marketID)
+  let marketID = event.address
+  let market = Market.load(marketID)!
   if (market.accrualBlockNumber != event.block.number.toI32()) {
     market = updateMarket(
       event.address,
@@ -355,10 +345,10 @@ export function handleTransfer(event: Transfer): void {
 
   // Checking if the tx is FROM the sToken contract (i.e. this will not run when minting)
   // If so, it is a mint, and we don't need to run these calculations
-  let accountFromID = event.params.from.toHex()
+  let accountFromID = event.params.from
   if (accountFromID != marketID) {
     let accountFrom = Account.load(accountFromID)
-    if (accountFrom == null) {
+    if (!accountFrom) {
       createAccount(accountFromID)
     }
 
@@ -391,10 +381,10 @@ export function handleTransfer(event: Transfer): void {
   // If so, we ignore it. this leaves an edge case, where someone who accidentally sends
   // sTokens to a sToken contract, where it will not get recorded. Right now it would
   // be messy to include, so we are leaving it out for now TODO fix this in future
-  let accountToID = event.params.to.toHex()
+  let accountToID = event.params.to
   if (accountToID != marketID) {
     let accountTo = Account.load(accountToID)
-    if (accountTo == null) {
+    if (!accountTo) {
       createAccount(accountToID)
     }
 
@@ -424,9 +414,7 @@ export function handleTransfer(event: Transfer): void {
   }
 
   let transferID = event.transaction.hash
-    .toHexString()
-    .concat('-')
-    .concat(event.transactionLogIndex.toString())
+    .concatI32(event.transactionLogIndex.toI32())
 
   let transfer = new TransferEvent(transferID)
   transfer.amount = event.params.amount.toBigDecimal().div(sTokenDecimalsBD)
@@ -443,8 +431,8 @@ export function handleAccrueInterest(event: AccrueInterest): void {
 }
 
 export function handleNewReserveFactor(event: NewReserveFactor): void {
-  let marketID = event.address.toHex()
-  let market = Market.load(marketID)
+  let marketID = event.address
+  let market = Market.load(marketID)!
   market.reserveFactor = event.params.newReserveFactorMantissa
   market.save()
 }
@@ -452,9 +440,9 @@ export function handleNewReserveFactor(event: NewReserveFactor): void {
 export function handleNewMarketInterestRateModel(
   event: NewMarketInterestRateModel,
 ): void {
-  let marketID = event.address.toHex()
+  let marketID = event.address
   let market = Market.load(marketID)
-  if (market == null) {
+  if (!market) {
     market = createMarket(marketID)
   }
   market.interestRateModelAddress = event.params.newInterestRateModel

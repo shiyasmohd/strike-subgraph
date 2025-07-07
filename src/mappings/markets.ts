@@ -1,7 +1,7 @@
 /* eslint-disable prefer-const */ // to satisfy AS compiler
 
 // For each division by 10, add one to exponent to truncate one significant figure
-import { Address, BigDecimal, BigInt, log } from '@graphprotocol/graph-ts'
+import { Address, BigDecimal, BigInt, Bytes, log } from '@graphprotocol/graph-ts'
 import { Market, Comptroller } from '../types/schema'
 import { PriceOracle2 } from '../types/templates/SToken/PriceOracle2'
 import { ERC20 } from '../types/templates/SToken/ERC20'
@@ -15,19 +15,17 @@ import {
   zeroBD,
 } from './helpers'
 
-let sUSDCAddress = '0x3774e825d567125988fb293e926064b6faa71dab'
-let sETHAddress = '0xbee9cf658702527b0acb2719c1faa29edc006a92'
-let daiAddress = '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359'
+let sUSDCAddress = Bytes.fromHexString('0x3774e825d567125988fb293e926064b6faa71dab')
+let sETHAddress = Bytes.fromHexString('0xbee9cf658702527b0acb2719c1faa29edc006a92')
+let daiAddress = Bytes.fromHexString('0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359')
 
 // Used for all sERC20 contracts
 function getTokenPrice(
-  blockNumber: i32,
   eventAddress: Address,
-  underlyingAddress: Address,
   underlyingDecimals: i32,
 ): BigDecimal {
-  let comptroller = Comptroller.load('1')
-  let oracleAddress = comptroller.priceOracle as Address
+  let comptroller = Comptroller.load(Bytes.fromI32(1))!
+  let oracleAddress = Address.fromBytes(comptroller.priceOracle!)
   let underlyingPrice: BigDecimal
 
   /* This must use the sToken address.
@@ -51,9 +49,9 @@ function getTokenPrice(
   return underlyingPrice
 }
 
-export function createMarket(marketAddress: string): Market {
+export function createMarket(marketAddress: Bytes): Market {
   let market: Market
-  let contract = SToken.bind(Address.fromString(marketAddress))
+  let contract = SToken.bind(Address.fromBytes(marketAddress))
 
   // It is sETH, which has a slightly different interface
   if (marketAddress == sETHAddress) {
@@ -70,9 +68,9 @@ export function createMarket(marketAddress: string): Market {
   } else {
     market = new Market(marketAddress)
     market.underlyingAddress = contract.underlying()
-    let underlyingContract = ERC20.bind(market.underlyingAddress as Address)
+    let underlyingContract = ERC20.bind(Address.fromBytes(market.underlyingAddress))
     market.underlyingDecimals = underlyingContract.decimals()
-    if (market.underlyingAddress.toHexString() != daiAddress) {
+    if (market.underlyingAddress != daiAddress) {
       market.underlyingName = underlyingContract.name()
       market.underlyingSymbol = underlyingContract.symbol()
     } else {
@@ -113,11 +111,11 @@ export function createMarket(marketAddress: string): Market {
 
 // Only to be used after block 10678764, since it's aimed to fix the change to USD based price oracle.
 function getETHinUSD(blockNumber: i32): BigDecimal {
-  let comptroller = Comptroller.load('1')
-  let oracleAddress = comptroller.priceOracle as Address
+  let comptroller = Comptroller.load(Bytes.fromI32(1))!
+  let oracleAddress = Address.fromBytes(comptroller.priceOracle!)
   let oracle = PriceOracle2.bind(oracleAddress)
   let ethPriceInUSD = oracle
-    .getUnderlyingPrice(Address.fromString(sETHAddress))
+    .getUnderlyingPrice(Address.fromBytes(sETHAddress))
     .toBigDecimal()
     .div(mantissaFactorBD)
   return ethPriceInUSD
@@ -128,15 +126,15 @@ export function updateMarket(
   blockNumber: i32,
   blockTimestamp: i32,
 ): Market {
-  let marketID = marketAddress.toHexString()
+  let marketID = marketAddress
   let market = Market.load(marketID)
-  if (market == null) {
+  if (!market) {
     market = createMarket(marketID)
   }
 
   // Only updateMarket if it has not been updated this block
   if (market.accrualBlockNumber != blockNumber) {
-    let contractAddress = Address.fromString(market.id)
+    let contractAddress = Address.fromBytes(market.id)
     let contract = SToken.bind(contractAddress)
 
     let ethPriceInUSD = getETHinUSD(blockNumber)
@@ -146,9 +144,7 @@ export function updateMarket(
       market.underlyingPriceUSD = ethPriceInUSD.truncate(market.underlyingDecimals)
     } else {
       let tokenPriceUSD = getTokenPrice(
-        blockNumber,
         contractAddress,
-        market.underlyingAddress as Address,
         market.underlyingDecimals,
       )
       market.underlyingPrice = tokenPriceUSD
@@ -229,5 +225,5 @@ export function updateMarket(
     }
     market.save()
   }
-  return market as Market
+  return market
 }

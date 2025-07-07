@@ -15,24 +15,25 @@ import { SToken } from '../types/templates'
 import { Market, Comptroller, Account } from '../types/schema'
 import { mantissaFactorBD, updateCommonSTokenStats, createAccount } from './helpers'
 import { createMarket } from './markets'
+import { Bytes } from '@graphprotocol/graph-ts'
 
 export function handleMarketListed(event: MarketListed): void {
   // Dynamically index all new listed tokens
   SToken.create(event.params.sToken)
   // Create the market for this token, since it's now been listed.
-  let market = createMarket(event.params.sToken.toHexString())
+  let market = createMarket(event.params.sToken)
   market.save()
 }
 
 export function handleMarketEntered(event: MarketEntered): void {
-  let market = Market.load(event.params.sToken.toHexString())
+  let market = Market.load(event.params.sToken)
   // Null check needed to avoid crashing on a new market added. Ideally when dynamic data
   // sources can source from the contract creation block and not the time the
   // comptroller adds the market, we can avoid this altogether
-  if (market != null) {
-    let accountID = event.params.account.toHex()
+  if (market) {
+    let accountID = event.params.account
     let account = Account.load(accountID)
-    if (account == null) {
+    if (!account) {
       createAccount(accountID)
     }
 
@@ -51,14 +52,14 @@ export function handleMarketEntered(event: MarketEntered): void {
 }
 
 export function handleMarketExited(event: MarketExited): void {
-  let market = Market.load(event.params.sToken.toHexString())
+  let market = Market.load(event.params.sToken)
   // Null check needed to avoid crashing on a new market added. Ideally when dynamic data
   // sources can source from the contract creation block and not the time the
   // comptroller adds the market, we can avoid this altogether
-  if (market != null) {
-    let accountID = event.params.account.toHex()
+  if (market) {
+    let accountID = event.params.account
     let account = Account.load(accountID)
-    if (account == null) {
+    if (!account) {
       createAccount(accountID)
     }
 
@@ -77,17 +78,17 @@ export function handleMarketExited(event: MarketExited): void {
 }
 
 export function handleNewCloseFactor(event: NewCloseFactor): void {
-  let comptroller = Comptroller.load('1')
+  let comptroller = Comptroller.load(Bytes.fromI32(1))!
   comptroller.closeFactor = event.params.newCloseFactorMantissa
   comptroller.save()
 }
 
 export function handleNewCollateralFactor(event: NewCollateralFactor): void {
-  let market = Market.load(event.params.sToken.toHexString())
+  let market = Market.load(event.params.sToken)
   // Null check needed to avoid crashing on a new market added. Ideally when dynamic data
   // sources can source from the contract creation block and not the time the
   // comptroller adds the market, we can avoid this altogether
-  if (market != null) {
+  if (market) {
     market.collateralFactor = event.params.newCollateralFactorMantissa
       .toBigDecimal()
       .div(mantissaFactorBD)
@@ -97,22 +98,22 @@ export function handleNewCollateralFactor(event: NewCollateralFactor): void {
 
 // This should be the first event acccording to etherscan but it isn't.... price oracle is. weird
 export function handleNewLiquidationIncentive(event: NewLiquidationIncentive): void {
-  let comptroller = Comptroller.load('1')
+  let comptroller = Comptroller.load(Bytes.fromI32(1))!
   comptroller.liquidationIncentive = event.params.newLiquidationIncentiveMantissa
   comptroller.save()
 }
 
 export function handleNewMaxAssets(event: NewMaxAssets): void {
-  let comptroller = Comptroller.load('1')
+  let comptroller = Comptroller.load(Bytes.fromI32(1))!
   comptroller.maxAssets = event.params.newMaxAssets
   comptroller.save()
 }
 
 export function handleNewPriceOracle(event: NewPriceOracle): void {
-  let comptroller = Comptroller.load('1')
+  let comptroller = Comptroller.load(Bytes.fromI32(1))
   // This is the first event used in this mapping, so we use it to create the entity
-  if (comptroller == null) {
-    comptroller = new Comptroller('1')
+  if (!comptroller) {
+    comptroller = new Comptroller(Bytes.fromI32(1))
   }
   comptroller.priceOracle = event.params.newPriceOracle
   comptroller.save()

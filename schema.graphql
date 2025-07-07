@@ -1,9 +1,9 @@
 """
 The Comptroller type has protocol level variables stored
 """
-type Comptroller @entity {
+type Comptroller @entity(immutable: false) {
     "ID is set to 1"
-    id: ID!
+    id: Bytes!
     "Address of price oracle the comptroller uses"
     priceOracle: Bytes
     "Factor used to determine repayAmount for liquidating"
@@ -17,7 +17,7 @@ type Comptroller @entity {
 """
 Market stores all high level variables for a sToken market
 """
-type Market @entity {
+type Market @entity(immutable: false) {
     #Fields that match compounds API
     "Yearly borrow rate. With 2102400 blocks per year"
     borrowRate: BigDecimal!
@@ -38,7 +38,7 @@ type Market @entity {
     "SToken symbol"
     symbol: String!
     "SToken address"
-    id: ID!
+    id: Bytes!
     "Borrows in the market"
     totalBorrows: BigDecimal!
     "SToken supply. STokens have 8 decimals"
@@ -71,9 +71,9 @@ type Market @entity {
 Account is an ETH address, with a list of all sToken markets the account has
 participated in, along with liquidation information.
 """
-type Account @entity {
+type Account @entity(immutable: false) {
     "User ETH address"
-    id: ID!
+    id: Bytes!
     "Array of STokens user is in"
     tokens: [AccountSToken!]! @derivedFrom(field: "account")
     "Count user has been liquidated"
@@ -99,9 +99,9 @@ type Account @entity {
 AccountSToken is a single account within a single sToken market, with data such
 as interest earned or paid
 """
-type AccountSToken @entity {
+type AccountSToken @entity(immutable: false) {
     "Concatenation of SToken address and user address"
-    id: ID!
+    id: Bytes!
     "Relation to market"
     market: Market!
     "Symbol of the sToken"
@@ -150,8 +150,8 @@ type AccountSToken @entity {
 """
 Auxiliary entity for AccountSToken
 """
-type AccountSTokenTransaction @entity {
-  id: ID!
+type AccountSTokenTransaction @entity(immutable: true) {
+  id: Bytes!
 
   account: AccountSToken!
 
@@ -170,7 +170,7 @@ RedeemEvent, and LiquidationEvent all use this interface
 """
 interface STokenTransfer {
     "Transaction hash concatenated with log index"
-    id: ID!
+    id: Bytes!
     "sTokens transferred"
     amount: BigDecimal!
     "Account that received tokens"
@@ -189,9 +189,9 @@ interface STokenTransfer {
 TransferEvent will be stored for every mint, redeem, liquidation, and any normal
 transfer between two accounts.
 """
-type TransferEvent implements STokenTransfer @entity {
+type TransferEvent implements STokenTransfer @entity(immutable: true) {
     "Transaction hash concatenated with log index"
-    id: ID!
+    id: Bytes!
     "sTokens transferred"
     amount: BigDecimal!
     "Account that received tokens"
@@ -210,9 +210,9 @@ type TransferEvent implements STokenTransfer @entity {
 MintEvent stores information for mints. From address will always be a sToken
 market address
 """
-type MintEvent implements STokenTransfer @entity {
+type MintEvent implements STokenTransfer @entity(immutable: true) {
     "Transaction hash concatenated with log index"
-    id: ID!
+    id: Bytes!
     "sTokens transferred"
     amount: BigDecimal!
     "Account that received tokens (minter)"
@@ -233,9 +233,9 @@ type MintEvent implements STokenTransfer @entity {
 RedeemEvent stores information for redeems. To address will always be a
 sToken market address
 """
-type RedeemEvent implements STokenTransfer @entity {
+type RedeemEvent implements STokenTransfer @entity(immutable: true) {
     "Transaction hash concatenated with log index"
-    id: ID!
+    id: Bytes!
     "sTokens transferred"
     amount: BigDecimal!
     "Account that received tokens (SToken contract)"
@@ -256,9 +256,9 @@ type RedeemEvent implements STokenTransfer @entity {
 LiquidationEvent stores information for liquidations. The event is emitted from
 the sToken market address.
 """
-type LiquidationEvent implements STokenTransfer @entity {
+type LiquidationEvent implements STokenTransfer @entity(immutable: true) {
     "Transaction hash concatenated with log index"
-    id: ID!
+    id: Bytes!
     "sTokens seized"
     amount: BigDecimal!
     "Liquidator receiving tokens"
@@ -283,7 +283,7 @@ and repays
 """
 interface UnderlyingTransfer {
     "Transaction hash concatenated with log index"
-    id: ID!
+    id: Bytes!
     "Amount of underlying borrowed"
     amount: BigDecimal!
     "Total borrows of this asset the account has"
@@ -301,9 +301,9 @@ interface UnderlyingTransfer {
 """
 BorrowEvent stores information for borrows
 """
-type BorrowEvent implements UnderlyingTransfer @entity {
+type BorrowEvent implements UnderlyingTransfer @entity(immutable: true) {
     "Transaction hash concatenated with log index"
-    id: ID!
+    id: Bytes!
     "Amount of underlying borrowed"
     amount: BigDecimal!
     "Total borrows of this asset the account has"
@@ -322,9 +322,9 @@ type BorrowEvent implements UnderlyingTransfer @entity {
 RepayEvent stores information for repays. Payer is not always the same as
 borrower, such as in the event of a Liquidation
 """
-type RepayEvent implements UnderlyingTransfer @entity {
+type RepayEvent implements UnderlyingTransfer @entity(immutable: true) {
     "Transaction hash concatenated with log index"
-    id: ID!
+    id: Bytes!
     "Amount of underlying repaid"
     amount: BigDecimal!
     "Total borrows of this asset the account has"
